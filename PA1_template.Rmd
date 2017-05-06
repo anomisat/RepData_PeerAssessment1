@@ -7,15 +7,16 @@ This assignment analyzes data from a personal activity monitoring device. This d
 ## Loading and preprocessing the data
 
 ```{r, warning=FALSE, message=FALSE}
-setwd("C:/Projects/Training/R/Reproducible Research/Scripts")
+setwd("C:/Projects/Training/R/Reproducible Research/Data")
 library(dplyr)
 library(ggplot2)
 library(lattice)
+library(knitr)
 ```
 
 ```{r}
 activity <- read.csv("activity.csv")
-activity$date_2 <- as.Date(activity$date, "%Y-%m-%d")
+activity$date <- as.Date(activity$date, "%Y-%m-%d")
 ```
 
 The variables included in this dataset are:
@@ -29,14 +30,17 @@ The dataset is stored in a comma-separated-value (CSV) file and there are a tota
 ## What is mean total number of steps taken per day?
 
 ```{r}
-table_1 <- group_by(activity, date_2)
-table_2 <- summarise(table_1, Total_steps=sum(steps, na.rm = T))
-g <- ggplot(table_2,aes(x=date_2,y=Total_steps))
-g + geom_bar(stat="identity")+xlab("Day")+ylab("Steps")+ggtitle("Total steps per day")
+table_1 <- group_by(activity, date)
+table_2 <- summarise(table_1, Total_steps=sum(steps))
 
-table_3 <- summarise(table_1, Avg_steps=mean(steps, na.rm = T), Median_steps=median(steps, na.rm = T))
-print(table_3)
+hist(table_2$Total_steps, main="Total number of steps per day", xlab="Number of steps")
+
+mean(table_2$Total_steps, na.rm=T)
+median(table_2$Total_steps, na.rm = T)
+
 ```
+
+The mean Total number of steps per day is 10766.19 and the median is 10765.
 
 ## What is the average daily activity pattern?
 
@@ -62,28 +66,27 @@ The total number of missing values is 2304.
 ```{r}
 means_all <- rep(means, 61)
 activity$Mean_by_int <- means_all
-activity$steps_2[is.na(activity$steps)] <- activity$Mean_by_int[is.na(activity$steps)]
-activity$steps_2[!is.na(activity$steps)] <- activity$steps[!is.na(activity$steps)]
+activity$steps_imp <- ifelse(is.na(activity$steps), activity$Mean_by_int, activity$steps)
 activity_2 <- activity[,-1]
+
+table_4 <- group_by(activity_2, date)
+table_5 <- summarise(table_4, Total_steps=sum(steps_imp))
+
+hist(table_5$Total_steps, main="Total number of steps per day (after imp)", xlab="Number of steps")
+
+mean(table_5$Total_steps)
+median(table_5$Total_steps)
+
 ```
 
-After the imputation, the mean and median of the steps change.
+After the imputation, the mean doesn't change but the median increases by 1.19.
 
 ```{r}
-activity_2$date_2 <- as.Date(activity_2$date, "%Y-%m-%d")
-table_4 <- group_by(activity_2, date_2)
-table_5 <- summarise(table_4, Total_steps=sum(steps_2, na.rm = T))
-
-g <- ggplot(table_5,aes(x=date_2,y=Total_steps))
-g + geom_bar(stat="identity")+xlab("Day")+ylab("Steps")+ggtitle("Total steps per day")
-
-table_6 <- summarise(table_4, Avg_steps=mean(steps_2, na.rm = T), Median_steps=median(steps_2, na.rm = T))
-table_6
 
 table_5 <- rename(table_5, Total_steps_imp=Total_steps)
 table_7 <- cbind(table_2, table_5)
 
-m <-  ggplot(table_7, aes(date_2)) + 
+m <-  ggplot(table_7, aes(date)) + 
   geom_bar(aes(y = Total_steps_imp, fill = "Total_steps_imp"), stat = "identity") +
   geom_bar(aes(y = Total_steps, fill = "Total_steps"), stat = "identity") + 
   xlab("Day")+ylab("Steps")+ggtitle("Total steps per day")
@@ -95,13 +98,12 @@ On the graph we can see the total number of steps before and after the imputatio
 ## Are there differences in activity patterns between weekdays and weekends?
 
 ```{r}
-activity_2$Weekday <- weekdays(activity_2$date_2)
-activity_2$day_flag[activity_2$Weekday %in% c("Monday","Tuesday","Wednesday","Thursday","Friday")] <- "Weekday"
-activity_2$day_flag[activity_2$Weekday %in% c("Saturday","Sunday")] <- "Weekend"
+activity_2$Weekday <- weekdays(activity_2$date)
+activity_2$day_flag <- ifelse(activity_2$Weekday %in% c("Saturday", "Sunday"), "Weekend", "Weekday")
 activity_2$day_flag <- as.factor(activity_2$day_flag)
 
-grouped_data <- aggregate(steps_2 ~ interval + day_flag, activity_2, mean)
-xyplot(steps_2 ~ interval | day_flag, data = grouped_data, xlab="Interval", ylab="Steps", main = "Avarage Steps per Interval by Weekday", layout=c(1,2), type="l")
+grouped_data <- aggregate(steps_imp ~ interval + day_flag, activity_2, mean)
+xyplot(steps_imp ~ interval | day_flag, data = grouped_data, xlab="Interval", ylab="Steps", main = "Avarage Steps per Interval by Weekday", layout=c(1,2), type="l")
 ```
 
 During the weekend, there is higher activity in general, although in the weekdays, the maximum number of steps is higher than in the weekend.

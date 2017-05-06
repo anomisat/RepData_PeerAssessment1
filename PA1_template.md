@@ -8,16 +8,17 @@ This assignment analyzes data from a personal activity monitoring device. This d
 
 
 ```r
-setwd("C:/Projects/Training/R/Reproducible Research/Scripts")
+setwd("C:/Projects/Training/R/Reproducible Research/Data")
 library(dplyr)
 library(ggplot2)
 library(lattice)
+library(knitr)
 ```
 
 
 ```r
 activity <- read.csv("activity.csv")
-activity$date_2 <- as.Date(activity$date, "%Y-%m-%d")
+activity$date <- as.Date(activity$date, "%Y-%m-%d")
 ```
 
 The variables included in this dataset are:
@@ -32,35 +33,31 @@ The dataset is stored in a comma-separated-value (CSV) file and there are a tota
 
 
 ```r
-table_1 <- group_by(activity, date_2)
-table_2 <- summarise(table_1, Total_steps=sum(steps, na.rm = T))
-g <- ggplot(table_2,aes(x=date_2,y=Total_steps))
-g + geom_bar(stat="identity")+xlab("Day")+ylab("Steps")+ggtitle("Total steps per day")
+table_1 <- group_by(activity, date)
+table_2 <- summarise(table_1, Total_steps=sum(steps))
+
+hist(table_2$Total_steps, main="Total number of steps per day", xlab="Number of steps")
 ```
 
 ![plot of chunk unnamed-chunk-3](figure/unnamed-chunk-3-1.png)
 
 ```r
-table_3 <- summarise(table_1, Avg_steps=mean(steps, na.rm = T), Median_steps=median(steps, na.rm = T))
-print(table_3)
+mean(table_2$Total_steps, na.rm=T)
 ```
 
 ```
-## # A tibble: 61 × 3
-##        date_2 Avg_steps Median_steps
-##        <date>     <dbl>        <dbl>
-## 1  2012-10-01       NaN           NA
-## 2  2012-10-02   0.43750            0
-## 3  2012-10-03  39.41667            0
-## 4  2012-10-04  42.06944            0
-## 5  2012-10-05  46.15972            0
-## 6  2012-10-06  53.54167            0
-## 7  2012-10-07  38.24653            0
-## 8  2012-10-08       NaN           NA
-## 9  2012-10-09  44.48264            0
-## 10 2012-10-10  34.37500            0
-## # ... with 51 more rows
+## [1] 10766.19
 ```
+
+```r
+median(table_2$Total_steps, na.rm = T)
+```
+
+```
+## [1] 10765
+```
+
+The mean Total number of steps per day is 10766.19 and the median is 10765.
 
 ## What is the average daily activity pattern?
 
@@ -103,59 +100,52 @@ The total number of missing values is 2304.
 ```r
 means_all <- rep(means, 61)
 activity$Mean_by_int <- means_all
-activity$steps_2[is.na(activity$steps)] <- activity$Mean_by_int[is.na(activity$steps)]
-activity$steps_2[!is.na(activity$steps)] <- activity$steps[!is.na(activity$steps)]
+activity$steps_imp <- ifelse(is.na(activity$steps), activity$Mean_by_int, activity$steps)
 activity_2 <- activity[,-1]
+
+table_4 <- group_by(activity_2, date)
+table_5 <- summarise(table_4, Total_steps=sum(steps_imp))
+
+hist(table_5$Total_steps, main="Total number of steps per day (after imp)", xlab="Number of steps")
 ```
 
-After the imputation, the mean and median of the steps change.
-
+![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-6-1.png)
 
 ```r
-activity_2$date_2 <- as.Date(activity_2$date, "%Y-%m-%d")
-table_4 <- group_by(activity_2, date_2)
-table_5 <- summarise(table_4, Total_steps=sum(steps_2, na.rm = T))
-
-g <- ggplot(table_5,aes(x=date_2,y=Total_steps))
-g + geom_bar(stat="identity")+xlab("Day")+ylab("Steps")+ggtitle("Total steps per day")
+mean(table_5$Total_steps)
 ```
 
-![plot of chunk unnamed-chunk-7](figure/unnamed-chunk-7-1.png)
+```
+## [1] 10766.19
+```
 
 ```r
-table_6 <- summarise(table_4, Avg_steps=mean(steps_2, na.rm = T), Median_steps=median(steps_2, na.rm = T))
-table_6
+median(table_5$Total_steps)
 ```
 
 ```
-## # A tibble: 61 × 3
-##        date_2 Avg_steps Median_steps
-##        <date>     <dbl>        <dbl>
-## 1  2012-10-01  37.38260     34.11321
-## 2  2012-10-02   0.43750      0.00000
-## 3  2012-10-03  39.41667      0.00000
-## 4  2012-10-04  42.06944      0.00000
-## 5  2012-10-05  46.15972      0.00000
-## 6  2012-10-06  53.54167      0.00000
-## 7  2012-10-07  38.24653      0.00000
-## 8  2012-10-08  37.38260     34.11321
-## 9  2012-10-09  44.48264      0.00000
-## 10 2012-10-10  34.37500      0.00000
-## # ... with 51 more rows
+## [1] 10766.19
 ```
+
+After the imputation, the mean doesn't change but the median increases by 1.19.
+
 
 ```r
 table_5 <- rename(table_5, Total_steps_imp=Total_steps)
 table_7 <- cbind(table_2, table_5)
 
-m <-  ggplot(table_7, aes(date_2)) + 
+m <-  ggplot(table_7, aes(date)) + 
   geom_bar(aes(y = Total_steps_imp, fill = "Total_steps_imp"), stat = "identity") +
   geom_bar(aes(y = Total_steps, fill = "Total_steps"), stat = "identity") + 
   xlab("Day")+ylab("Steps")+ggtitle("Total steps per day")
 m
 ```
 
-![plot of chunk unnamed-chunk-7](figure/unnamed-chunk-7-2.png)
+```
+## Warning: Removed 8 rows containing missing values (position_stack).
+```
+
+![plot of chunk unnamed-chunk-7](figure/unnamed-chunk-7-1.png)
 
 On the graph we can see the total number of steps before and after the imputation. When the steps were missing before the imputation, now we see a value.
 
@@ -163,13 +153,12 @@ On the graph we can see the total number of steps before and after the imputatio
 
 
 ```r
-activity_2$Weekday <- weekdays(activity_2$date_2)
-activity_2$day_flag[activity_2$Weekday %in% c("Monday","Tuesday","Wednesday","Thursday","Friday")] <- "Weekday"
-activity_2$day_flag[activity_2$Weekday %in% c("Saturday","Sunday")] <- "Weekend"
+activity_2$Weekday <- weekdays(activity_2$date)
+activity_2$day_flag <- ifelse(activity_2$Weekday %in% c("Saturday", "Sunday"), "Weekend", "Weekday")
 activity_2$day_flag <- as.factor(activity_2$day_flag)
 
-grouped_data <- aggregate(steps_2 ~ interval + day_flag, activity_2, mean)
-xyplot(steps_2 ~ interval | day_flag, data = grouped_data, xlab="Interval", ylab="Steps", main = "Avarage Steps per Interval by Weekday", layout=c(1,2), type="l")
+grouped_data <- aggregate(steps_imp ~ interval + day_flag, activity_2, mean)
+xyplot(steps_imp ~ interval | day_flag, data = grouped_data, xlab="Interval", ylab="Steps", main = "Avarage Steps per Interval by Weekday", layout=c(1,2), type="l")
 ```
 
 ![plot of chunk unnamed-chunk-8](figure/unnamed-chunk-8-1.png)
